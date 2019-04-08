@@ -1,0 +1,1 @@
+../SDx_aws/make_host_app.sh
