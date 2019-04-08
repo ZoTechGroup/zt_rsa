@@ -23,7 +23,7 @@ if [ -d "$OPENSSL_DIR" ]; then
 	sudo make install
 else
 	echo "OPENSSL_DIR doesn't exist, downloading and installing OpenSSL:"
-    source ~/data/rsa_use/install_openssl.sh
+    source ~/data/zt_rsa/rsa_use/install_openssl.sh
 fi
 
 # System reboot

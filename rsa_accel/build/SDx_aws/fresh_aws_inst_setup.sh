@@ -26,7 +26,7 @@ sudo yum install perl-Test-Simple
 #sudo yum install perl-Text-Template # perl Text::Template module should be 1.46 or later
 #sudo yum install rh-perl524-perl-Text-Template
 export OPENSSL_DIR=/home/centos/src/project_data/openssl
-source ~/src/project_data/rsa_use/install_openssl.sh
+source ~/src/project_data/zt_rsa/rsa_use/install_openssl.sh
 
 # System reboot
 sudo shutdown -r now
