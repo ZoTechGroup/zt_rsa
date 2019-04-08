@@ -21,6 +21,8 @@ if [[ -z "$AWS_FPGA_REPO_DIR" ]]; then
 fi
 echo "AWS_FPGA_REPO_DIR is set to $AWS_FPGA_REPO_DIR"
 
+
+if [ $USER = "root" ]; then
 # Activation of XRT (Xilinx/AWS runtime)
 source $AWS_FPGA_REPO_DIR/sdaccel_runtime_setup.sh
 # The above script may require update/install of Xilinx/AWS XRT (runtime environment), something like following. Please do it if needed.
@@ -34,16 +36,12 @@ source $AWS_FPGA_REPO_DIR/sdaccel_runtime_setup.sh
 # Alternative way to activate Xilinx/AWS runtime: using XRT, pre-installed separtely on AWS F1 development AMI.
 # It could be outdated comparing with AWS github repo, but doesn't require additional system installations.
 # source /opt/xilinx/xrt/setup.sh
+fi
 
 export AWS_PLATFORM=/home/centos/src/project_data/aws-fpga/SDAccel/aws_platform/xilinx_aws-vu9p-f1-04261818_dynamic_5_0/xilinx_aws-vu9p-f1-04261818_dynamic_5_0.xpfm
 
 # defining XCL_EMULATION_MODE as execution on AWS to differ it from other clouds (Nimbix or what ever).
 export XCL_EMULATION_MODE=hw_aws
 
-if [[ -z "$OPENSSL_DIR" ]]; then
-	export OPENSSL_DIR=/home/centos/src/project_data/openssl
-	echo "OPENSSL_DIR is not set, setting it to $OPENSSL_DIR location by default (meaning runtime on AWS F1 instance)."
-	echo "In case OpenSSL location is different, please set it accordingly:"
-	echo "export OPENSSL_DIR=$OPENSSL_DIR"
-fi
+export OPENSSL_DIR=/home/centos/src/project_data/openssl
 echo "OPENSSL_DIR, needed for OpenSSL use cases of RSA accelerator, is set to $OPENSSL_DIR."
