@@ -7,7 +7,7 @@
 
 Two basic use cases are presented.
   
-** Montgomery Modular Exponentiation direct optimized API **
+**Montgomery Modular Exponentiation direct optimized API**
 * To compile this example please execute the following steps:
   `cd ~/<path to zt_rsa>/rsa_accel/build/SDx_<platform>`
   `./make_host_app.sh` This will create demo executable.
@@ -16,17 +16,17 @@ Two basic use cases are presented.
   `./run_hw_<platform>.sh`
 
 
-** OpenSSL compliant Modular Exponentiation engine API **
+**OpenSSL compliant Modular Exponentiation engine API**
 OpenSSL interface to direct optimized API of ZoTech RSA accelerator is implemented as an OpenSSL engine shared library **_ZoTech_AWS_RSA_Engine.so_**. The engine replaces **`int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`**. The FPGA-based accelerator is invoked automatically each time when OpenSSL performs RSA cryptographic operation which uses **`BN_mod_exp()`**. The example assumes existence of compiled and installed **OpenSSL v1.1.1a**.
-* To compile this example please execute the following steps:
-  `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`
-  `cd ~/<path to zt_rsa>/rsa_use/rsa_engine/build`
-  `./make.sh` This will create shared library.
-  `cd ~/<path to zt_rsa>/rsa_use/rsa_sign_demo/build`
-  `./make.sh` This will create demo executable.
-* To run the example please execute the following steps:
-  `sudo sh` This step is not needed for Nimbix platform.
-  `./run_hw_<platform>.sh`
+* To compile this example please execute the following steps:  
+  `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
+  `cd ~/<path to zt_rsa>/rsa_use/rsa_engine/build`  
+  `./make.sh` This will create shared library.  
+  `cd ~/<path to zt_rsa>/rsa_use/rsa_sign_demo/build`  
+  `./make.sh` This will create demo executable.  
+* To run the example please execute the following steps:  
+  `sudo sh` This step is not needed for Nimbix platform.  
+  `./run_hw_<platform>.sh`  
 
 The application performs calculations and shows performance measuremens as below:
 
@@ -49,7 +49,7 @@ If you would like to compare the speed with the pure SW implementation, please r
 
 # How to use OpenSSL compliant HW accelerator in your application #
 
-To use the **ZoTech FPGA-based RSA accelerator** as it is, your application should be OpenSSL-based. In case you have a more efficient implementation of RSA, you can replace OpenSSL's functions with your own implementation and call **`BN_mod_exp()`** each time you need to invoke HW accelerator to perform multiplication.
+To use the **ZoTech OpenSSL compliant RSA accelerator** as it is, your application should be OpenSSL-based. In case you have a more efficient implementation of RSA, you can replace OpenSSL's functions with your own implementation and call **`BN_mod_exp()`** each time you need to invoke HW accelerator to perform multiplication.
 
 The best performance can be achieved by combining multithread mode with OpenSSL's ASYNC_JOB: the application creates threads and each thread creates some number of ASYNC_JOBs. Recommended number of threads is `<number of CPU on F1 instance> - 2`
 
