@@ -1,22 +1,22 @@
 ## **[ZoTech FPGA-based RSA accelerator](http://zotechgroup.com/)** ##
 
 # Overview #
-**The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. Being implemented as OpenSSL compliant engine on following platforms the performances achieved are:
-  Amazon AWS F1 iinstance: upto 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation
-  Alveo U250 on Nimbix:    upto 32,000 RSA signs per second vs 9,000 signs per second with SW-only implementation
+**The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. Being implemented as OpenSSL compliant engine on following platforms the performances achieved are:  
+  Amazon AWS F1 iinstance: upto 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
+  Alveo U250 on Nimbix:    upto 32,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
 
 Two basic use cases are presented.
   
-**Montgomery Modular Exponentiation direct optimized API**
-* To compile this example please execute the following steps:
-  `cd ~/<path to zt_rsa>/rsa_accel/build/SDx_<platform>`
-  `./make_host_app.sh` This will create demo executable.
-* To run the example please execute the following steps:
-  `sudo sh` This step is not needed for Nimbix platform.
+**Montgomery Modular Exponentiation direct optimized API**  
+* To compile this example please execute the following steps:  
+  `cd ~/<path to zt_rsa>/rsa_accel/build/SDx_<platform>`  
+  `./make_host_app.sh` This will create demo executable.  
+* To run the example please execute the following steps:  
+  `sudo sh` This step is not needed for Nimbix platform.  
   `./run_hw_<platform>.sh`
 
 
-**OpenSSL compliant Modular Exponentiation engine API**
+**OpenSSL compliant Modular Exponentiation engine API**  
 OpenSSL interface to direct optimized API of ZoTech RSA accelerator is implemented as an OpenSSL engine shared library **_ZoTech_AWS_RSA_Engine.so_**. The engine replaces **`int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`**. The FPGA-based accelerator is invoked automatically each time when OpenSSL performs RSA cryptographic operation which uses **`BN_mod_exp()`**. The example assumes existence of compiled and installed **OpenSSL v1.1.1a**.
 * To compile this example please execute the following steps:  
   `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
@@ -26,7 +26,7 @@ OpenSSL interface to direct optimized API of ZoTech RSA accelerator is implement
   `./make.sh` This will create demo executable.  
 * To run the example please execute the following steps:  
   `sudo sh` This step is not needed for Nimbix platform.  
-  `./run_hw_<platform>.sh`  
+  `./run_hw_<platform>.sh`
 
 The application performs calculations and shows performance measuremens as below:
 
