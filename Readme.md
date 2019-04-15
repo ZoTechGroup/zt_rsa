@@ -21,7 +21,7 @@ OpenSSL interface to direct optimized API of ZoTech RSA accelerator is implement
 * To compile this example please execute the following steps:  
   `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
   `cd ~/<path to zt_rsa>/rsa_use/rsa_engine/build`  
-  `./make.sh` This will create shared library.  
+  `./make_<platform>.sh` This will create shared library.  
   `cd ~/<path to zt_rsa>/rsa_use/rsa_sign_demo/build`  
   `./make.sh` This will create demo executable.  
 * To run the example please execute the following steps:  
