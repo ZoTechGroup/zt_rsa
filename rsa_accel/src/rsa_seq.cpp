@@ -9,6 +9,7 @@
 #include "timer.h"
 #include <vector>
 #include <cassert>
+#include "rsa_hls_def.h"
 
 //#define TRACE
 
@@ -470,7 +471,7 @@ static const char* const kernel_entry_name = "rsaMontgPowNKernelEntry64";
 static const size_t DEFAULT_RSA_BITS = 2048;
 static const size_t LIMIT_RSA_BITS = 4096;
 static const size_t DEFAULT_RSA_WORDS = DEFAULT_RSA_BITS/RSA_WORD_BITS;
-static const size_t DEFAULT_UNIT_COUNT = 400;
+// static const size_t DEFAULT_UNIT_COUNT = 400;
 static const size_t LIMIT_UNIT_COUNT = 570;
 static const size_t DEFAULT_KERNEL_ARG_WORDS = 1+4*DEFAULT_RSA_WORDS;
 // kernel args:
@@ -1200,7 +1201,7 @@ namespace KernelNS {
         info.magic = info.kMagic;
         info.flags = 0;
         info.max_mod_bits = DEFAULT_RSA_BITS;
-        info.max_req_count = DEFAULT_UNIT_COUNT;
+        info.max_req_count = UNIT_COUNT;
         info.montg_word_bits = DEFAULT_MONTG_WORD_BITS;
         info.request_words = DEFAULT_KERNEL_ARG_WORDS;
         info.result_words = DEFAULT_KERNEL_RESULT_WORDS;

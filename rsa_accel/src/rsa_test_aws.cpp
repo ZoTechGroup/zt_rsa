@@ -5,13 +5,14 @@
 #include <iostream>
 #include <sys/time.h>
 #include <cassert>
+#include "rsa_hls_def.h"
 
 static const size_t DEFAULT_RSA_BITS = 2048;
-static const size_t DEFAULT_UNIT_COUNT = 400;
+// static const size_t DEFAULT_UNIT_COUNT = 400;
 static const size_t DEFAULT_KERNEL_ARG_WORDS = 1+4*MAX_RSA_WORDS;
 static const size_t DEFAULT_KERNEL_RESULT_WORDS = MAX_RSA_WORDS;
 
-#define UNIT_COUNT DEFAULT_UNIT_COUNT
+// #define UNIT_COUNT DEFAULT_UNIT_COUNT
 #define KERNEL_ARG_WORDS DEFAULT_KERNEL_ARG_WORDS
 #define KERNEL_RESULT_WORDS DEFAULT_KERNEL_RESULT_WORDS
 

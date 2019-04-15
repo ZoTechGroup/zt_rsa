@@ -5,14 +5,15 @@
 //#define TRACE 1
 //#define COLLECT_SIZES
 
-# include "rsa_pow_3.h"
-# define Montgomery HLSMontgomery
+#include "rsa_pow_3.h"
+#include "rsa_hls_def.h"
+#define Montgomery HLSMontgomery
 
 using namespace std;
 
-#ifndef UNIT_COUNT
-# define UNIT_COUNT 400
-#endif
+// #ifndef UNIT_COUNT
+// # define UNIT_COUNT 400
+// #endif
 
 RSAIntBase::word_t* dst_arr  [UNIT_COUNT];
 size_t              bsz_arr  [UNIT_COUNT];
