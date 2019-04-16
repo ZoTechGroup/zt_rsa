@@ -1,7 +1,7 @@
 # Setup actions for newly created Nimbix instance
 
-sudo apt -y install apt-utils
 sudo apt -y update
+sudo apt -y install apt-utils
 sudo apt -y upgrade
 sudo apt -y install build-essential
 sudo apt -y install gcc
