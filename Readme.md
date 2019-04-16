@@ -1,31 +1,31 @@
 ## **[ZoTech FPGA-based RSA accelerator](http://zotechgroup.com/)** ##
 
 # Overview #
-**The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. Being implemented as OpenSSL compliant engine on following platforms the performances achieved are:  
-  Amazon AWS F1 iinstance: upto 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
-  Alveo U250 on Nimbix:    upto 32,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
+**The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. When implemented as an OpenSSL compliant engine on following platforms the performances achieved are:  
+  Amazon AWS F1 iinstance: up to 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
+  Alveo U250 on Nimbix:    up to 32,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
 
 Two basic use cases are presented.
   
 **Montgomery Modular Exponentiation direct optimized API**  
 * To compile this example please execute the following steps:  
   `cd ~/<path to zt_rsa>/rsa_accel/build/SDx_<platform>`  
-  `./make_host_app.sh` This will create demo executable.  
+  `./make_host_app.sh` This will create a demo executable.  
 * To run the example please execute the following steps:  
-  `sudo sh` This step is not needed for Nimbix platform.  
+  `sudo sh` (this step is not needed for Nimbix platform)  
   `./run_hw_<platform>.sh`
 
 
 **OpenSSL compliant Modular Exponentiation engine API**  
-OpenSSL interface to direct optimized API of ZoTech RSA accelerator is implemented as an OpenSSL engine shared library **_ZoTech_AWS_RSA_Engine.so_**. The engine replaces **`int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`**. The FPGA-based accelerator is invoked automatically each time when OpenSSL performs RSA cryptographic operation which uses **`BN_mod_exp()`**. The example assumes existence of compiled and installed **OpenSSL v1.1.1a**.
+OpenSSL interface to the direct optimized API of the ZoTech RSA accelerator is implemented as an OpenSSL engine shared library **_ZoTech_AWS_RSA_Engine.so_**. The engine replaces **`int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`**. The FPGA-based accelerator is invoked automatically each time OpenSSL performs an RSA cryptographic operation using **`BN_mod_exp()`**. The example assumes the existence of a compiled and installed **OpenSSL v1.1.1a**.
 * To compile this example please execute the following steps:  
   `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
   `cd ~/<path to zt_rsa>/rsa_use/rsa_engine/build`  
   `./make_<platform>.sh` This will create shared library.  
   `cd ~/<path to zt_rsa>/rsa_use/rsa_sign_demo/build`  
-  `./make.sh` This will create demo executable.  
+  `./make.sh` This will create a demo executable.  
 * To run the example please execute the following steps:  
-  `sudo sh` This step is not needed for Nimbix platform.  
+  `sudo sh` This step is not needed for the Nimbix platform.  
   `./run_hw_<platform>.sh`
 
 The application performs calculations and shows performance measuremens as below:
@@ -49,9 +49,9 @@ If you would like to compare the speed with the pure SW implementation, please r
 
 # How to use OpenSSL compliant HW accelerator in your application #
 
-To use the **ZoTech OpenSSL compliant RSA accelerator** as it is, your application should be OpenSSL-based. In case you have a more efficient implementation of RSA, you can replace OpenSSL's functions with your own implementation and call **`BN_mod_exp()`** each time you need to invoke HW accelerator to perform multiplication.
+To use the **ZoTech OpenSSL compliant RSA accelerator** as it is, your application should be OpenSSL-based. In case you have a more efficient implementation of RSA, you can replace OpenSSL's functions with your own implementation and call **`BN_mod_exp()`** each time you need to invoke the HW accelerator to perform multiplication.
 
-The best performance can be achieved by combining multithread mode with OpenSSL's ASYNC_JOB: the application creates threads and each thread creates some number of ASYNC_JOBs. Recommended number of threads is `<number of CPU on F1 instance> - 2`
+The best performance can be achieved by combining multithread mode with OpenSSL's ASYNC_JOB: the application creates threads and each thread creates some number of ASYNC_JOBs. The recommended number of threads is `<number of CPU on F1 instance> - 2`
 
 **_Important note:_** *ZoTech FPGA-based RSA accelerator supports multithreading, but doesn't support multiprocessing. This means that your application can create some number of threads with ASYNC_JOBs and call **`BN_mod_exp()`** from these threads and ASYNC_JOBs but can't use **`fork`** to duplicate the process*
 
@@ -70,7 +70,7 @@ The complete code example is available in **RSA_Sign_Demo.cpp** in function `mai
 
 ## 2. Use ASYNC_JOBs ##
 
-OpenSSL ASYNC_JOB permits the optimization of resource utilization by switching between jobs when one needs to wait for data for processing or event. A thread starts ASYNC_JOB and then the job is running until it reaches a point when it needs to wait. At this point the job will pause and the control will return to the thread. A thread could continue to perform its own work and at some point restarts the job as shown in the illustration below:
+OpenSSL ASYNC_JOB permits the optimization of resource utilization by switching between jobs when one needs to wait for data for processing or event. A thread starts ASYNC_JOB and then the job runs until it reaches a point when it needs to wait. At this point the job will pause and the control will return to the thread. A thread could continue to perform its own work and at some point restarts the job as shown in the illustration below:
 ![](Async_Job.png)
 
 The **`BN_mod_exp()`** implementation in **_ZoTech_AWS_RSA_Engine_** provides the best performance when it is called from ASYNC_JOB. After **`BN_mod_exp()`** forwards the data to the FPGA for computation, it pauses the job and the next job in the same thread can call **`BN_mod_exp()`** with its data. Others threads are able to perform the same operations in parallel. This process is illustrated in the image below:
