@@ -1,3 +1,10 @@
+#!/bin/sh
+
+if [ -z "$XILINX_VIVADO" ]; then
+    echo "XILINX_VIVADO is not set, please source ../xilinx_xxx_setup.sh script."
+    exit 2
+fi
+
 # Building sw part only of AWS FPGA-accelerated application
 g++ ../../src/rsa_test_aws.cpp\
     ../../src/rsa_gmp.cpp\
