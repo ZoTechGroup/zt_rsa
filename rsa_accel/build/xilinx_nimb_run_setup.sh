@@ -9,6 +9,9 @@ if [ $script == $0 ]; then
     exit 2
 fi
 
+source /opt/xilinx/xrt/setup.sh
+export XILINX_VIVADO=/opt/xilinx/Vivado/2018.3
 export AWS_PLATFORM=/opt/xilinx/platforms/xilinx_u250_xdma_201830_1/xilinx_u250_xdma_201830_1.xpfm
-export OPENSSL_DIR=/home/nimbix/data/openssl
+
+export OPENSSL_DIR=/opt/example/openssl
 echo "OPENSSL_DIR, needed for OpenSSL use cases of RSA accelerator, is set to $OPENSSL_DIR."
