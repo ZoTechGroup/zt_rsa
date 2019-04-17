@@ -71,10 +71,10 @@ The complete code example is available in **RSA_Sign_Demo.cpp** in function `mai
 ## 2. Use ASYNC_JOBs ##
 
 OpenSSL ASYNC_JOB permits the optimization of resource utilization by switching between jobs when one needs to wait for data for processing or event. A thread starts ASYNC_JOB and then the job runs until it reaches a point when it needs to wait. At this point the job will pause and the control will return to the thread. A thread could continue to perform its own work and at some point restarts the job as shown in the illustration below:
+
 ![](Async_Job.png)
 
 The **`BN_mod_exp()`** implementation in **_ZoTech_AWS_RSA_Engine_** provides the best performance when it is called from ASYNC_JOB. After **`BN_mod_exp()`** forwards the data to the FPGA for computation, it pauses the current job and the next job in the same thread can call **`BN_mod_exp()`** with its data. Others threads are able to perform the same operations in parallel. This process is illustrated in the image below:
-
 
 ![](FPGA.png)
 
