@@ -3,7 +3,9 @@
 
 #include "rsa_hls_api.h"
 
+#ifndef UNIT_COUNT
 #define UNIT_COUNT 500
+#endif
 
 // max number of bits in RSA modulus
 // this variable must be defined on a Makefile level
