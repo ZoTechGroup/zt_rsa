@@ -75,6 +75,7 @@ OpenSSL ASYNC_JOB permits the optimization of resource utilization by switching 
 
 The **`BN_mod_exp()`** implementation in **_ZoTech_AWS_RSA_Engine_** provides the best performance when it is called from ASYNC_JOB. After **`BN_mod_exp()`** forwards the data to the FPGA for computation, it pauses the current job and the next job in the same thread can call **`BN_mod_exp()`** with its data. Others threads are able to perform the same operations in parallel. This process is illustrated in the image below:
 
+
 ![](FPGA.png)
 
 In order to run the RSA using FPGA, define the job's functions to perform the desired type of cryptographic operations. For example, in **RSA_Sign_Demo.cpp** ASYNC_JOB to perform signing is defined as:
