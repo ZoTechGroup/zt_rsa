@@ -1,7 +1,7 @@
 # Setup actions for newly created Nimbix instance
 
 sudo apt update
-sudo apt upgrade # upgrade doesn't affect to docker build and is not recommended (https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#run)
+sudo apt upgrade -y # upgrade doesn't affect to docker build and is not recommended (https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#run)
 sudo apt install -y apt-utils
 sudo apt install -y build-essential
 sudo apt install -y gcc
