@@ -1,21 +1,21 @@
 # Setup actions for newly created Nimbix instance
 
-sudo apt -y update
-sudo apt -y install apt-utils
-sudo apt -y upgrade
-sudo apt -y install build-essential
-sudo apt -y install gcc
-sudo apt -y install g++
-sudo apt -y install make
-sudo apt -y install git
-sudo apt -y install subversion
-sudo apt -y install mc
-sudo apt -y install libgmp-dev # required for modular exponentiation
-sudo apt -y install libpthread-stubs0-dev # for pthread lib update
+sudo apt update
+sudo apt upgrade # upgrade doesn't affect to docker build and is not recommended (https://docs.docker.com/develop/develop-images/dockerfile_best-practices/#run)
+sudo apt install -y apt-utils
+sudo apt install -y build-essential
+sudo apt install -y gcc
+sudo apt install -y g++
+sudo apt install -y make
+sudo apt install -y git
+sudo apt install -y subversion
+sudo apt install -y mc
+sudo apt install -y libgmp-dev # required for modular exponentiation
+sudo apt install -y libpthread-stubs0-dev # for pthread lib update
 
 # Installing OpenSSL
-sudo apt -y install perl
-sudo apt -y install libtext-template-perl
+sudo apt install -y perl
+sudo apt install -y libtext-template-perl
 export OPENSSL_DIR=/opt/example/openssl
 . /opt/example/zt_rsa/rsa_use/install_openssl.sh
 
