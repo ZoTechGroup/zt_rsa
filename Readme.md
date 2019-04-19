@@ -3,13 +3,13 @@
 # Overview #
 **The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. When implemented as an OpenSSL compliant engine on following platforms the performances achieved are:  
   Amazon AWS F1 iinstance: up to 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
-  Alveo U250 on Nimbix:    up to 32,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
+  Alveo U250 on Nimbix:    up to 36,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
 
 Two basic use cases are presented.
   
 **Montgomery Modular Exponentiation direct optimized API**  
 * To compile this example please execute the following steps:  
-  `cd ~/<path to zt_rsa>/rsa_accel/build/SDx_<platform>`  
+  `cd <path to zt_rsa>/rsa_accel/build/SDx_<platform>`  
   `./make_host_app.sh` This will create a demo executable.  
 * To run the example please execute the following steps:  
   `sudo sh` (this step is not needed for Nimbix platform)  
@@ -19,10 +19,10 @@ Two basic use cases are presented.
 **OpenSSL compliant Modular Exponentiation engine API**  
 OpenSSL interface to the direct optimized API of the ZoTech RSA accelerator is implemented as an OpenSSL engine shared library **_ZoTech_AWS_RSA_Engine.so_**. The engine replaces **`int BN_mod_exp(BIGNUM *r, BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`**. The FPGA-based accelerator is invoked automatically each time OpenSSL performs an RSA cryptographic operation using **`BN_mod_exp()`**. The example assumes the existence of a compiled and installed **OpenSSL v1.1.1a**.
 * To compile this example please execute the following steps:  
-  `source ~/<path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
-  `cd ~/<path to zt_rsa>/rsa_use/rsa_engine/build`  
+  `source <path to zt_rsa>/rsa_accel/build/xilinx_<platform>_run_setup`  
+  `cd <path to zt_rsa>/rsa_use/rsa_engine/build`  
   `./make_<platform>.sh` This will create shared library.  
-  `cd ~/<path to zt_rsa>/rsa_use/rsa_sign_demo/build`  
+  `cd <path to zt_rsa>/rsa_use/rsa_sign_demo/build`  
   `./make.sh` This will create a demo executable.  
 * To run the example please execute the following steps:  
   `sudo sh` This step is not needed for the Nimbix platform.  
@@ -32,20 +32,20 @@ The application performs calculations and shows performance measuremens as below
 
     Overal statistic:
     
-    Total time              : 9.46 sec
-    Average time per sign   : 31.53 us
-    Average sign per second : 31719
+    Total time              : 8.34 sec
+    Average time per sign   : 27.79 us
+    Average sign per second : 35984
     
     Engine statistic:
 
     Total multiplication performed      : 600000
-    Total time spent by FPGA            : 7.35 sec
-    Average time per one multiplication : 12.26 us
-    Average FPGA load                   : 99.5 %
+    Total time spent by FPGA            : 6.54 sec
+    Average time per one multiplication : 10.90 us
+    Average FPGA load                   : 96.6 %
 
 If you would like to compare the speed with the pure SW implementation, please run `run_sw_ssl.sh` instead of `run_hw_<platform>.sh`
 
-**Please check [ZoTech GitHub repository](https://github.com/ZoTechGroup/zt_rsa "ZoTech GitHub repository") to get the latest examples and documentation.**
+**Please check [ZoTech GitHub repository](https://github.com/ZoTechGroup/zt_rsa "ZoTech GitHub repository") to get the latest examples and documentation.** By default it is clonned to "/home/centos/src/project_data/zt_rsa" directory on AWS and to "/opt/example/zt_rsa" directory on Nimbix.
 
 # How to use OpenSSL compliant HW accelerator in your application #
 
