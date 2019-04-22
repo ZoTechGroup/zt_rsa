@@ -2,7 +2,7 @@
 
 # Overview #
 **The ZoTech FPGA-based RSA accelerator** speeds-up the Montgomery multiplication operation - the most heavily used operation in RSA algorithms. The accelerator supports a maximum key length of 2048 bits. When implemented as an OpenSSL compliant engine on following platforms the performances achieved are:  
-  Amazon AWS F1 iinstance: up to 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
+  Amazon AWS F1 instance: up to 28,000 RSA signs per second vs 4,500 signs per second with SW-only implementation.  
   Alveo U250 on Nimbix:    up to 36,000 RSA signs per second vs 9,000 signs per second with SW-only implementation.  
 
 Two basic use cases are presented.
