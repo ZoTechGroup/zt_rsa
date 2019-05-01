@@ -9,7 +9,7 @@ if [ $script == $0 ]; then
     exit 2
 fi
 
-source /opt/Xilinx/SDx/2018.2.op2258646/settings64.sh
+source /opt/Xilinx/SDx/2018.3.op2405991/settings64.sh
 
 if [[ -z "$AWS_FPGA_REPO_DIR" ]]; then
 	export AWS_FPGA_REPO_DIR=/home/centos/src/project_data/aws-fpga
