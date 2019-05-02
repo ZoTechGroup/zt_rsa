@@ -16,8 +16,10 @@ sudo yum install mc
 sudo yum install gmp-devel # required for modular exponentiation
 sudo yum install glibc     # for pthread lib update
 
-# Clonning of AWS tools:
+# Clonning of AWS tools (according to https://github.com/aws/aws-fpga/blob/master/SDAccel/README.md):
 git clone --recurse-submodules https://github.com/aws/aws-fpga.git $AWS_FPGA_REPO_DIR
+cd $AWS_FPGA_REPO_DIR                                         
+source ./sdaccel_setup.sh
 
 # Installing OpenSSL
 sudo yum install perl
