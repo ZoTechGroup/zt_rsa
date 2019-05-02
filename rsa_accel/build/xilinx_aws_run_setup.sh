@@ -12,19 +12,20 @@ fi
 # source /opt/Xilinx/SDx/2018.3.op2405991/settings64.sh
 # reinstallation and setting XRT for 2018.2-built XCLBIN on 2018.3-instance
 export VIVADO_TOOL_VERSION=2018.2
-if [ $USER != "root" ]; then
-  echo "This will reinstall XRT to 2018.2 compliant with built XCLBIN kernel"
-  echo "(https://github.com/aws/aws-fpga/blob/master/SDAccel/docs/XRT_installation_instructions.md)"
-  read -p "Press [Enter] if agree, [Ctrl-C] otherwise"
-  curl -s https://s3.amazonaws.com/aws-fpga-developer-ami/1.5.0/Patches/XRT_2018_2_XDF_RC5/xrt_201802.2.1.0_7.5.1804-xrt.rpm -o xrt_201802.2.1.0_7.5.1804-xrt.rpm
-  curl -s https://s3.amazonaws.com/aws-fpga-developer-ami/1.5.0/Patches/XRT_2018_2_XDF_RC5/xrt_201802.2.1.0_7.5.1804-aws.rpm -o xrt_201802.2.1.0_7.5.1804-aws.rpm
-  sudo yum remove -y xrt-aws
-  sudo yum remove -y xrt
-  sudo yum install -y xrt_201802.2.1.0_7.5.1804-xrt.rpm
-  sudo yum install -y xrt_201802.2.1.0_7.5.1804-aws.rpm
-  rm xrt_201802.2.1.0_7.5.1804-xrt.rpm
-  rm xrt_201802.2.1.0_7.5.1804-aws.rpm
-fi
+# reinstallation itself is commented as needed only once on 2018.3-instance
+# if [ $USER != "root" ]; then
+#   echo "This will reinstall XRT to 2018.2 compliant with built XCLBIN kernel"
+#   echo "(https://github.com/aws/aws-fpga/blob/master/SDAccel/docs/XRT_installation_instructions.md)"
+#   read -p "Press [Enter] if agree, [Ctrl-C] otherwise"
+#   curl -s https://s3.amazonaws.com/aws-fpga-developer-ami/1.5.0/Patches/XRT_2018_2_XDF_RC5/xrt_201802.2.1.0_7.5.1804-xrt.rpm -o xrt_201802.2.1.0_7.5.1804-xrt.rpm
+#   curl -s https://s3.amazonaws.com/aws-fpga-developer-ami/1.5.0/Patches/XRT_2018_2_XDF_RC5/xrt_201802.2.1.0_7.5.1804-aws.rpm -o xrt_201802.2.1.0_7.5.1804-aws.rpm
+#   sudo yum remove -y xrt-aws
+#   sudo yum remove -y xrt
+#   sudo yum install -y xrt_201802.2.1.0_7.5.1804-xrt.rpm
+#   sudo yum install -y xrt_201802.2.1.0_7.5.1804-aws.rpm
+#   rm xrt_201802.2.1.0_7.5.1804-xrt.rpm
+#   rm xrt_201802.2.1.0_7.5.1804-aws.rpm
+# fi
 
 if [[ -z "$AWS_FPGA_REPO_DIR" ]]; then
 	export AWS_FPGA_REPO_DIR=/home/centos/src/project_data/aws-fpga
