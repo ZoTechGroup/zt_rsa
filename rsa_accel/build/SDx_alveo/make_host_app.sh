@@ -6,7 +6,7 @@ if [ -z "$XILINX_VIVADO" ]; then
 fi
 
 # Building sw part only of AWS FPGA-accelerated application
-g++ ../../src/rsa_test_aws.cpp\
+g++ ../../src/rsa_test.cpp\
     ../../src/rsa_gmp.cpp\
     ../../src/rsa_pow.cpp\
     ../../src/rsa_seq.cpp\

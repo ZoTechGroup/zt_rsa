@@ -48,8 +48,5 @@ fi
 
 export AWS_PLATFORM=/home/centos/src/project_data/aws-fpga/SDAccel/aws_platform/xilinx_aws-vu9p-f1-04261818_dynamic_5_0/xilinx_aws-vu9p-f1-04261818_dynamic_5_0.xpfm
 
-# defining XCL_EMULATION_MODE as execution on AWS to differ it from other clouds (Nimbix or what ever).
-export XCL_EMULATION_MODE=hw_aws
-
 export OPENSSL_DIR=/home/centos/src/project_data/openssl
 echo "OPENSSL_DIR, needed for OpenSSL use cases of RSA accelerator, is set to $OPENSSL_DIR."
