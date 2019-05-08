@@ -378,7 +378,7 @@ void help()
          << "  -kernel-calls <n>   call kernel n times\n"
          << "  -bench-parallel     run encryption speed test in parallel\n"
          << "  -bench-sequential   run encryption speed test sequentially\n"
-         << "  -bench-clocks       collect and print time spent in different code\n"
+         << "  -bench-clock        collect and print time spent in different code\n"
          << "  -low-level          use low-level kernel interface\n"
          << "  -low-level2         use 2-way low-level kernel interface\n"
          << "  -trace-init         printout results of Montgomery initialization\n"
