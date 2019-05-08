@@ -140,8 +140,6 @@ extern "C" int AWS_RSA_Init(ENGINE *e)
 {
   Debug_Message("AWS_RSA_Init() enter\n");
 
-  int run_mode = FPGA_RUN_MODE_HW;
-  
   std::string const plPath = getenv("AWS_PLATFORM");
   std::size_t const plFirstChar = plPath.rfind("/")+1;
   std::size_t const plLastChar  = plPath.rfind(".xpfm");
@@ -149,6 +147,8 @@ extern "C" int AWS_RSA_Init(ENGINE *e)
   bool const plAWS = (plPath.rfind("xilinx_aws") != std::string::npos); // is platform really AWS-based
   std::string kernel_file;
 
+  int run_mode = plAWS ? FPGA_RUN_MODE_HW_AWS : FPGA_RUN_MODE_HW;
+  
   pthread_attr_t attr;
 
   int ret = OSSL_OK;
@@ -170,7 +170,6 @@ extern "C" int AWS_RSA_Init(ENGINE *e)
     {
       run_mode = strcasecmp(env, "hw_emu") == 0 ? FPGA_RUN_MODE_HW_EMU : run_mode;
       run_mode = strcasecmp(env, "sw_emu") == 0 ? FPGA_RUN_MODE_SW_EMU : run_mode;
-      run_mode = plAWS                          ? FPGA_RUN_MODE_HW_AWS : run_mode;
     }
 
   switch( run_mode )
