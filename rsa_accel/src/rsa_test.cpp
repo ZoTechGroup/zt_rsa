@@ -297,9 +297,8 @@ RSAMessage RSAEP_ref(const RSAMessage& msg, const RSAPrivateKey& key)
 
 inline int RSAEP_ref_queue(const RSAMessage& msg_inp, const RSAPrivateKey& key, RSAMessage& msg_out)
 {
-  cout << key.publicExponent << endl;
-  cout << key.modulus        << endl;
-  
+    // cout << "key.publicExponent  = " << key.publicExponent << endl;
+    // cout << "key.modulus         = " << key.modulus        << endl;
   
     return ref_powmod_simple_queue(msg_inp, key.publicExponent, key.modulus, msg_out);
 }
