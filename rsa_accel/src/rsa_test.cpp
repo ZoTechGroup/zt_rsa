@@ -2,6 +2,7 @@
 #include "rsa_seq.h"
 #include "rsa.h"
 #include "rsa_gmp.h"
+#include "rsa_ssl_bn.h"
 #include <iostream>
 #include <cassert>
 #include <vector>
@@ -270,12 +271,22 @@ int ref_powmod_complex_sec_queue_after(const RSAMessage& msg, const RSAPrivateKe
 }
 */
 
-RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key)
+RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key, bool GMPuse = false)
 {
-    //return ref_powmod_simple(msg, key.publicExponent, key.modulus);
+  //return ref_powmod_simple(msg, key.publicExponent, key.modulus);
+  if (GMPuse) {
     GMPInt ret;
     mpz_powm(ret, GMPInt(msg), GMPInt(key.publicExponent), GMPInt(key.modulus));
     return ret;
+  }
+  else {
+    BNInt ret;
+    // BN_CTX* ctx = BN_CTX_new();
+    BN_CTX* ctx = BN_CTX_secure_new();
+    BN_mod_exp(ret, BNInt(msg), BNInt(key.publicExponent), BNInt(key.modulus), ctx);
+    BN_CTX_free(ctx);
+    return ret;
+  }
 }
 
 inline
