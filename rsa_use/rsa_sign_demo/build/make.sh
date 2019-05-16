@@ -8,5 +8,5 @@ fi
 g++ ../src/RSA_Sign_Demo.cpp\
     -I$OPENSSL_DIR/.. -I$OPENSSL_DIR/include\
     -O3 -DNDEBUG -std=c++0x -pthread\
-    -lpthread -lcrypto -L/usr/local/lib64\
+    -lpthread -L$OPENSSL_DIR -lcrypto\
     -o RSA_Sign_Demo 
