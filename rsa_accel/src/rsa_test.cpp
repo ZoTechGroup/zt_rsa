@@ -898,13 +898,16 @@ int main(int argc, char *argv[])
     try {
         RSAPrivateKey key(key_file, RSAKeyParser::base64);
         
-        cout << "key.exponent1       = " << key.exponent1 << endl << endl;
-        cout << "key.exponent2       = " << key.exponent2 << endl << endl;
-        cout << "key.modulus         = " << key.modulus   << endl << endl;
-        cout << "key.prime1          = " << key.prime1    << endl << endl;
-        cout << "key.prime2          = " << key.prime2    << endl << endl;
-        cout << "key.privateExponent = " << key.privateExponent << endl << endl;
-        cout << "key.publicExponent  = " << key.publicExponent  << endl << endl;
+        cout << endl << "Key parts:"  << endl;
+        cout << "modulus         (mod)  = " << key.modulus   << endl << endl;
+        cout << "publicExponent  (e)    = " << key.publicExponent  << endl << endl;
+        cout << "privateExponent (d)    = " << key.privateExponent << endl << endl;
+        cout << "prime1          (p)    = " << key.prime1    << endl << endl;
+        cout << "prime2          (q)    = " << key.prime2    << endl << endl;
+        cout << "exponent1       (dP)   = " << key.exponent1 << endl << endl;
+        cout << "exponent2       (dQ)   = " << key.exponent2 << endl << endl;
+        cout << "coefficient     (qInv) = " << key.exponent2 << endl << endl;
+
 
         if ( queue_mode ) {
           size_t MAX_REQ_COUNT = KernelNS::get_max_req_count();
