@@ -3,6 +3,7 @@
 #include "rsa.h"
 #include "rsa_gmp.h"
 #include "rsa_ssl_bn.h"
+#include <openssl/pem.h>
 #include <iostream>
 #include <cassert>
 #include <vector>
@@ -898,15 +899,49 @@ int main(int argc, char *argv[])
     try {
         RSAPrivateKey key(key_file, RSAKeyParser::base64);
         
-        cout << endl << "Key parts:"  << endl;
-        cout << "modulus         (mod)  = " << key.modulus   << endl << endl;
+        cout << endl << "RSA Key parts:" << endl;
+        cout << "modulus         (mod)  = " << key.modulus         << endl << endl;
         cout << "publicExponent  (e)    = " << key.publicExponent  << endl << endl;
         cout << "privateExponent (d)    = " << key.privateExponent << endl << endl;
-        cout << "prime1          (p)    = " << key.prime1    << endl << endl;
-        cout << "prime2          (q)    = " << key.prime2    << endl << endl;
-        cout << "exponent1       (dP)   = " << key.exponent1 << endl << endl;
-        cout << "exponent2       (dQ)   = " << key.exponent2 << endl << endl;
-        cout << "coefficient     (qInv) = " << key.exponent2 << endl << endl;
+        cout << "prime1          (p)    = " << key.prime1          << endl << endl;
+        cout << "prime2          (q)    = " << key.prime2          << endl << endl;
+        cout << "exponent1       (dP)   = " << key.exponent1       << endl << endl;
+        cout << "exponent2       (dQ)   = " << key.exponent2       << endl << endl;
+        cout << "coefficient     (qInv) = " << key.coefficient     << endl << endl;
+
+        // creating OpenSSl complient RSA key
+        FILE* keyFp = fopen(key_file.c_str(), "rb");
+        RSA* sslKey = RSA_new();
+        sslKey = PEM_read_RSAPrivateKey(keyFp, &sslKey, NULL, NULL);
+        if (!keyFp || !sslKey) {
+          cout << "ERROR: Cannot read and/or parse key file: " << key_file << endl;
+          return -1;
+        }
+
+        const BIGNUM* sslKey_n;
+        const BIGNUM* sslKey_e;
+        const BIGNUM* sslKey_d;
+        const BIGNUM* sslKey_p;
+        const BIGNUM* sslKey_q;
+        const BIGNUM* sslKey_dmp1;
+        const BIGNUM* sslKey_dmq1;
+        const BIGNUM* sslKey_iqmp;
+
+        RSA_get0_key       (sslKey, &sslKey_n, &sslKey_e, &sslKey_d);
+        RSA_get0_factors   (sslKey, &sslKey_p, &sslKey_q);
+        RSA_get0_crt_params(sslKey, &sslKey_dmp1, &sslKey_dmq1, &sslKey_iqmp);
+
+        cout << endl << "OpenSSL RSA Key parts:" << endl;
+        cout << "modulus         (mod)  = " << BN_bn2hex(sslKey_n)    << endl << endl;
+        cout << "publicExponent  (e)    = " << BN_bn2hex(sslKey_e)    << endl << endl;
+        cout << "privateExponent (d)    = " << BN_bn2hex(sslKey_d)    << endl << endl;
+        cout << "prime1          (p)    = " << BN_bn2hex(sslKey_p)    << endl << endl;
+        cout << "prime2          (q)    = " << BN_bn2hex(sslKey_q)    << endl << endl;
+        cout << "exponent1       (dP)   = " << BN_bn2hex(sslKey_dmp1) << endl << endl;
+        cout << "exponent2       (dQ)   = " << BN_bn2hex(sslKey_dmq1) << endl << endl;
+        cout << "coefficient     (qInv) = " << BN_bn2hex(sslKey_iqmp) << endl << endl;
+
+        RSA_free(sslKey);
 
 
         if ( queue_mode ) {
