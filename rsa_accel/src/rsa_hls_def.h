@@ -1,16 +1,11 @@
 #ifndef RSA_HLS_DEF_H
 #define RSA_HLS_DEF_H
 
+#include "rsa_seq_def.h"
 #include "rsa_hls_api.h"
 
 #ifndef UNIT_COUNT
 #define UNIT_COUNT 500
-#endif
-
-// max number of bits in RSA modulus
-// this variable must be defined on a Makefile level
-#ifndef MAX_RSA_BITS
-# define MAX_RSA_BITS 4096
 #endif
 
 #ifndef NO_CONST_TIME
