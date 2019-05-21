@@ -2,7 +2,6 @@
 #include "rsa_seq.h"
 #include "rsa.h"
 #include "rsa_gmp.h"
-#include "rsa_ssl_bn.h"
 #include <openssl/pem.h>
 #include <iostream>
 #include <cassert>
@@ -281,10 +280,10 @@ RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key, boo
     return ret;
   }
   else {
-    BNInt ret;
+    BIGNUM* ret = BN_new();
     // BN_CTX* ctx = BN_CTX_new();
     BN_CTX* ctx = BN_CTX_secure_new();
-    BN_mod_exp(ret, BNInt(msg), BNInt(key.publicExponent), BNInt(key.modulus), ctx);
+    BN_mod_exp(ret, msg, key.publicExponent, key.modulus, ctx);
     BN_CTX_free(ctx);
     return ret;
   }

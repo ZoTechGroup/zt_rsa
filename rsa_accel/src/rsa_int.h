@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cassert>
 #include <ap_int.h>
+#include <openssl/bn.h>
 
 template<size_t Bit32Count> struct RSABit32Type;
 template<> struct RSABit32Type<1> {
@@ -415,6 +416,34 @@ struct RSAInt : RSAIntBase
     {
         pragmas();
         from_hex_string(hex_str);
+    }
+    RSAInt(const BIGNUM* src)
+    {
+        if (1) //string-based conversion
+          from_hex_string(BN_bn2hex(src));
+        else { //bit-based conversion
+          size_t bitsCnt = 0;
+          size_t const bitsInWord = sizeof(word_t) << 3;
+          for (size_t wordsCnt = 0; wordsCnt < WORD_COUNT; wordsCnt++) {
+            words[wordsCnt] = 0;
+            for (size_t bitInWord = 0; bitInWord < bitsInWord; bitInWord++, bitsCnt++)
+              words[wordsCnt] |= word_t(BN_is_bit_set(src, bitsCnt)) << bitInWord;
+          }
+        }
+    }
+    operator BIGNUM*() const
+    {
+        BIGNUM* v = BN_new();
+        if (1) //string-based conversion
+          BN_hex2bn(&v, to_hex_string().c_str());
+        else { //bit-based conversion
+          BN_clear(v);
+          size_t bitsCnt = 0;
+          for (size_t wordsCnt = 0; wordsCnt < WORD_COUNT; wordsCnt++)
+          for (word_t bitsMask = 1; bitsMask != 0; bitsMask <<=1, bitsCnt++)
+            if (words[wordsCnt] & bitsMask) BN_set_bit(v, bitsCnt);
+        }
+        return v;
     }
     RSAInt(const word_t* src, size_t src_size)
     {
