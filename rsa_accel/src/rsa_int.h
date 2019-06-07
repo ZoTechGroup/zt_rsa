@@ -458,6 +458,44 @@ struct RSAInt : RSAIntBase
         std::fill(words+src_size, words+WORD_COUNT, 0);
     }
 
+    RSAInt(const uint8_t* src, const size_t src_size, bool bigEnd = false)
+    {
+        if (bigEnd) set_bigend_from_bytes(src, src_size);
+        else        set_from_bytes       (src, src_size);
+    }
+
+    void set_bigend_from_bytes(const uint8_t* src, const size_t src_size)
+    {
+        assert(src_size <= (WORD_COUNT*sizeof(word_t)));
+        size_t srcPtr = src_size-1;
+        for (size_t dstPtr = 0; dstPtr < src_size; dstPtr++) {
+          (reinterpret_cast<uint8_t*>(words))[dstPtr] = src[srcPtr];
+          srcPtr--;
+        }
+        std::fill(reinterpret_cast<uint8_t*>(words) + src_size,
+                  reinterpret_cast<uint8_t*>(words  + WORD_COUNT), 0);
+    }
+
+    void set_from_bytes(const uint8_t* src, const size_t src_size)
+    {
+        //AK: this conversion is not used anywhere yet, requires testing
+        assert(src_size <= (WORD_COUNT*sizeof(word_t)));
+        for (size_t dstPtr = 0; dstPtr < src_size; dstPtr++)
+          (reinterpret_cast<uint8_t*>(words))[dstPtr] = src[dstPtr];
+        std::fill(reinterpret_cast<uint8_t*>(words) + src_size,
+                  reinterpret_cast<uint8_t*>(words  + WORD_COUNT), 0);
+    }
+
+    void get_bigend_to_bytes(uint8_t* dst, const size_t dst_size)
+    {
+        assert(dst_size <= (WORD_COUNT*sizeof(word_t)));
+        size_t dstPtr = dst_size-1;
+        for (size_t srcPtr = 0; srcPtr < dst_size; srcPtr++) {
+          dst[dstPtr] = (reinterpret_cast<uint8_t*>(words))[srcPtr];
+          dstPtr--;
+        }
+    }
+
     size_t get_actual_bit_size() const
     {
         size_t word_count = WORD_COUNT;

@@ -2,6 +2,7 @@
 #include "rsa_seq.h"
 #include "rsa.h"
 #include "rsa_gmp.h"
+#include "rsa_pkcs.h"
 #include <openssl/pem.h>
 #include <iostream>
 #include <cassert>
@@ -271,19 +272,19 @@ int ref_powmod_complex_sec_queue_after(const RSAMessage& msg, const RSAPrivateKe
 }
 */
 
-RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key, bool GMPuse = false)
+RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key, bool as_public = true, bool GMPuse = false)
 {
   //return ref_powmod_simple(msg, key.publicExponent, key.modulus);
   if (GMPuse) {
     GMPInt ret;
-    mpz_powm(ret, GMPInt(msg), GMPInt(key.publicExponent), GMPInt(key.modulus));
+    mpz_powm(ret, GMPInt(msg), GMPInt(as_public ? key.publicExponent : key.privateExponent), GMPInt(key.modulus));
     return ret;
   }
   else {
     BIGNUM* ret = BN_new();
     // BN_CTX* ctx = BN_CTX_new();
     BN_CTX* ctx = BN_CTX_secure_new();
-    BN_mod_exp(ret, msg, key.publicExponent, key.modulus, ctx);
+    BN_mod_exp(ret, msg, as_public ? key.publicExponent : key.privateExponent, key.modulus, ctx);
     BN_CTX_free(ctx);
     return ret;
   }
@@ -374,6 +375,9 @@ void help()
          << "  -key <file>         RSA key file\n"
          << "  -msg <hexstring>    message to encrypt\n"
          << "  -queue              run requests in queue mode\n"
+         << "  -pkcs               run RSA PKCS conformance test\n"
+         << "  -pkcs-nopadd        disabling padding for PKCS-compliant test\n"
+         << "  -pkcs-noblind       disabling blinding for PKCS-compliant test\n"
          << "  -bench-count <n>    run speed test <n> times\n"
          << "  -bench-public-init  run speed test for public key preparation\n"
          << "  -bench-private-init run speed test for private key preparation\n"
@@ -661,7 +665,10 @@ int main(int argc, char *argv[])
     const char* kernel_file = 0;
     string key_file;
     string inp_msg;
-    bool queue_mode = false;
+    bool queue_mode  = false;
+    bool pkcs_mode   = false;
+    bool pkcs_nopadd = false;
+    bool pkcs_noblind = false;
     int bench_count = 0;
     bool bench_public_init = false;
     bool bench_private_init = false;
@@ -724,6 +731,18 @@ int main(int argc, char *argv[])
         }
         if ( args[i] == "-queue" ) {
             queue_mode = true;
+            continue;
+        }
+        if ( args[i] == "-pkcs" ) {
+            pkcs_mode = true;
+            continue;
+        }
+        if ( args[i] == "-pkcs-nopadd" ) {
+            pkcs_nopadd = true;
+            continue;
+        }
+        if ( args[i] == "-pkcs-noblind" ) {
+            pkcs_noblind = true;
             continue;
         }
         if ( args[i] == "-bench-count" && i+1 < args.size() &&
@@ -916,6 +935,8 @@ int main(int argc, char *argv[])
           cout << "ERROR: Cannot read and/or parse key file: " << key_file << endl;
           return -1;
         }
+        if (pkcs_noblind) RSA_blinding_off(sslKey); // Blinding is enabled by default
+        // RSA_clear_flags(sslKey, RSA_FLAG_CACHE_PUBLIC);
 
         const BIGNUM* sslKey_n;
         const BIGNUM* sslKey_e;
@@ -940,11 +961,17 @@ int main(int argc, char *argv[])
         cout << "exponent1       (dP)   = " << BN_bn2hex(sslKey_dmp1) << endl << endl;
         cout << "exponent2       (dQ)   = " << BN_bn2hex(sslKey_dmq1) << endl << endl;
         cout << "coefficient     (qInv) = " << BN_bn2hex(sslKey_iqmp) << endl << endl;
+        cout << "default flags: " << hex << RSA_flags     (sslKey)     << endl;
+        cout << "current flags: " << hex << RSA_test_flags(sslKey, ~0) << endl << endl;
+        cout << dec;
 
-        RSA_free(sslKey);
+        bool const blindOff = RSA_test_flags(sslKey, RSA_FLAG_NO_BLINDING);
+        cout << "RSA Padding  Off: " << pkcs_nopadd << endl;
+        cout << "RSA Blinding Off: " << blindOff    << endl;
 
 
         if ( queue_mode ) {
+          cout << "### Montgomery modular exponentiation queue test ###" << endl;
           size_t MAX_REQ_COUNT = KernelNS::get_max_req_count();
 
           RSAMessage msg[MAX_REQ_COUNT];
@@ -1007,8 +1034,183 @@ int main(int argc, char *argv[])
             }
           
           cout << "Results are correct" << endl;
+
+        } else if (pkcs_mode && !bench_count) {
+           cout << "### RSA PKCS conformance single test ###" << endl;
+
+           {
+            cout << endl << "Encrypt/decrypt test" << endl;
+            RSAMessage msg(inp_msg.c_str());
+            // int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_OAEP_PADDING;
+            int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_PADDING;
+            int msgMaxSize = RSA_size(sslKey) - (padding == RSA_PKCS1_PADDING      ? RSA_PKCS1_PADDING_SIZE:
+                                                 padding == RSA_PKCS1_OAEP_PADDING ? 42:0); // requirement for message length by PKCS
+            if ( ((msg.get_actual_bit_size()+7)/8) > msgMaxSize ) {
+                cout << "Message is trimmed to satisfy PKCS" << endl;
+                // normalize msg to fit modulus
+                msg.trim_bits(msgMaxSize * 8);
+                if ( GMPInt(msg) >= GMPInt(key.modulus) ) {
+                    msg.trim_bits(msgMaxSize * 8 - 1);
+                }
+                assert(GMPInt(msg) < GMPInt(key.modulus));
+            }
+
+            cout << "Single public key encryption" << endl;
+            srand(time(NULL)); //making further pseudo-random values non-deterministic
+
+            RSAMessage enc_msg;
+            int encSize = rsa_pkcs_public_encrypt(msg, enc_msg, key, padding);
+
+            int msgSize = pkcs_nopadd ? RSA_size(sslKey) : (msg.get_actual_bit_size()+7)/8;
+            uint8_t* msgBigEnd = new uint8_t[msgMaxSize]{}; //initializing with zeros
+            msg.get_bigend_to_bytes(msgBigEnd, msgSize);
+
+            uint8_t* msgBigEndEncRef = new uint8_t[RSA_size(sslKey)];
+            int refSize = RSA_public_encrypt(msgSize, msgBigEnd, msgBigEndEncRef, sslKey, padding);
+            RSAMessage ref_enc_msg(msgBigEndEncRef, refSize, true);
+
+            if (encSize < 0 || refSize < 0) {
+              cout << "Unsuccessful encryption:" << endl;
+              cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Ref Enc msg: " << ref_enc_msg.to_hex_string() << ", size: " << refSize << endl;
+              return 1;
+            }
+
+            RSAMessage mod_exp_msg = reference_public(msg, key);
+            if ( pkcs_nopadd ) {
+              cout << "Verification of encrypted data (no padding): ";
+              if (enc_msg != ref_enc_msg || enc_msg != mod_exp_msg) {
+                cout << "encryption mismatch:" << endl;
+                cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+                cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+                cout << "Ref Enc msg: " << ref_enc_msg.to_hex_string() << ", size: " << refSize << endl;
+                cout << "Mod Exp msg: " << mod_exp_msg.to_hex_string() << endl;
+                return 1;
+              }
+              else cout << "OK" << endl;
+            }
+
+            cout << "Single private key decryption" << endl;
+
+            RSAMessage dec_msg;
+            int decSize = rsa_pkcs_private_decrypt(enc_msg, dec_msg, key, padding, blindOff);
+
+            uint8_t* msgBigEndDecRef = new uint8_t[msgMaxSize];
+            refSize = RSA_private_decrypt(refSize, msgBigEndEncRef, msgBigEndDecRef, sslKey, padding);
+            RSAMessage ref_dec_msg(msgBigEndDecRef, refSize, true);
+
+            if (decSize < 0 || refSize < 0) {
+              cout << "Unsuccessful decryption:" << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Decoded msg: " << dec_msg    .to_hex_string() << ", size: " << decSize << endl;
+              cout << "Ref Dec msg: " << ref_dec_msg.to_hex_string() << ", size: " << refSize << endl;
+              return 1;
+            }
+
+            mod_exp_msg = reference_public(enc_msg, key, false);
+            cout << "Verification of decrypted data: ";
+            if (dec_msg != ref_dec_msg || dec_msg != msg || (pkcs_nopadd && dec_msg != mod_exp_msg)) {
+              cout << "decryption mismatch:" << endl;
+              cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Decoded msg: " << dec_msg    .to_hex_string() << ", size: " << decSize << endl;
+              cout << "Ref Dec msg: " << ref_dec_msg.to_hex_string() << ", size: " << refSize << endl;
+              cout << "Mod Exp msg: " << mod_exp_msg.to_hex_string() << endl;
+              return 1;
+            }
+            else cout << "OK" << endl;
+
+            delete[] msgBigEnd;
+            delete[] msgBigEndEncRef;
+            delete[] msgBigEndDecRef;
+           }
+
+           {
+            cout << endl << "Sign/verify test" << endl;
+            RSAMessage msg(inp_msg.c_str());
+            int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_PADDING;
+            int msgMaxSize = RSA_size(sslKey) - (padding == RSA_PKCS1_PADDING ? RSA_PKCS1_PADDING_SIZE:0); // requirement for message length by PKCS
+            if ( ((msg.get_actual_bit_size()+7)/8) > msgMaxSize ) {
+                cout << "Message is trimmed to satisfy PKCS" << endl;
+                // normalize msg to fit modulus
+                msg.trim_bits(msgMaxSize * 8);
+                if ( GMPInt(msg) >= GMPInt(key.modulus) ) {
+                    msg.trim_bits(msgMaxSize * 8 - 1);
+                }
+                assert(GMPInt(msg) < GMPInt(key.modulus));
+            }
+
+            cout << "Single private key encryption (sign)" << endl;
+
+            RSAMessage enc_msg;
+            int encSize = rsa_pkcs_private_encrypt(msg, enc_msg, key, padding, blindOff);
+
+            int msgSize = pkcs_nopadd ? RSA_size(sslKey) : (msg.get_actual_bit_size()+7)/8;
+            uint8_t* msgBigEnd = new uint8_t[msgMaxSize]{}; //initializing with zeros
+            msg.get_bigend_to_bytes(msgBigEnd, msgSize);
+
+            uint8_t* msgBigEndEncRef = new uint8_t[RSA_size(sslKey)];
+            int refSize = RSA_private_encrypt(msgSize, msgBigEnd, msgBigEndEncRef, sslKey, padding);
+            RSAMessage ref_enc_msg(msgBigEndEncRef, refSize, true);
+
+            if (encSize < 0 || refSize < 0) {
+              cout << "Unsuccessful sign:" << endl;
+              cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Ref Enc msg: " << ref_enc_msg.to_hex_string() << ", size: " << refSize << endl;
+              return 1;
+            }
+
+            RSAMessage mod_exp_msg = reference_public(msg, key, false);
+            cout << "Verification of encrypted data: ";
+            if (enc_msg != ref_enc_msg || (pkcs_nopadd && enc_msg != mod_exp_msg)) {
+              cout << "encryption mismatch:" << endl;
+              cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Ref Enc msg: " << ref_enc_msg.to_hex_string() << ", size: " << refSize << endl;
+              cout << "Mod Exp msg: " << mod_exp_msg.to_hex_string() << endl;
+              return 1;
+            }
+            else cout << "OK" << endl;
+
+            cout << "Single public key decryption (verify)" << endl;
+
+            RSAMessage dec_msg;
+            int decSize = rsa_pkcs_public_decrypt(enc_msg, dec_msg, key, padding);
+
+            uint8_t* msgBigEndDecRef = new uint8_t[msgMaxSize];
+            refSize = RSA_public_decrypt(refSize, msgBigEndEncRef, msgBigEndDecRef, sslKey, padding);
+            RSAMessage ref_dec_msg(msgBigEndDecRef, refSize, true);
+
+            if (decSize < 0 || refSize < 0) {
+              cout << "Unsuccessful decryption:" << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Decoded msg: " << dec_msg    .to_hex_string() << ", size: " << decSize << endl;
+              cout << "Ref Dec msg: " << ref_dec_msg.to_hex_string() << ", size: " << refSize << endl;
+              return 1;
+            }
+
+            mod_exp_msg = reference_public(enc_msg, key);
+            cout << "Verification of decrypted data: ";
+            if (dec_msg != ref_dec_msg || dec_msg != msg || (pkcs_nopadd && dec_msg != mod_exp_msg)) {
+              cout << "decryption mismatch:" << endl;
+              cout << " Source msg: " << msg        .to_hex_string() << ", size: " << msgSize << endl;
+              cout << "Encoded msg: " << enc_msg    .to_hex_string() << ", size: " << encSize << endl;
+              cout << "Decoded msg: " << dec_msg    .to_hex_string() << ", size: " << decSize << endl;
+              cout << "Ref Dec msg: " << ref_dec_msg.to_hex_string() << ", size: " << refSize << endl;
+              cout << "Mod Exp msg: " << mod_exp_msg.to_hex_string() << endl;
+              return 1;
+            }
+            else cout << "OK" << endl;
+
+            delete[] msgBigEnd;
+            delete[] msgBigEndEncRef;
+            delete[] msgBigEndDecRef;
+           }
         }
-  
+
+
         RSAMessage msg(inp_msg.c_str());
         if ( msg.get_actual_bit_size() >= key.modulus.get_actual_bit_size() ) {
             // normalize msg to fit modulus
@@ -1021,8 +1223,9 @@ int main(int argc, char *argv[])
         }
 
         RSAMessage enc_msg;
-        if ( !queue_mode && !bench_count && !bench_CPU && !bench_OCL && !bench_clock &&
+        if ( !queue_mode && !pkcs_mode && !bench_count && !bench_CPU && !bench_OCL && !bench_clock &&
              !trace_init && !trace_steps ) {
+            cout << "### Montgomery modular exponentiation single test ###" << endl;
             cout << "Single public key encryption"<<endl;
             enc_msg = RSAEP_ref(msg, key);
             //cout << "Encoded msg: "<<enc_msg.to_hex_string()<<endl;
@@ -1039,25 +1242,30 @@ int main(int argc, char *argv[])
                     }
                 }
             }
-            cout << "Verification of encrypted data"<<endl;
+            cout << "Verification of encrypted data: ";
             RSAMessage ref_enc_msg = reference_public(msg, key);
             if ( ref_enc_msg != enc_msg ) {
+                cout << "encryption mismatch:" << endl;
                 cout << " Source msg: "<<msg.to_hex_string()<<endl;
                 cout << "Encoded msg: "<<enc_msg.to_hex_string()<<endl;
                 cout << "Ref Enc msg: "<<ref_enc_msg.to_hex_string()<<endl;
                 return 1;
             }
-            cout << "Single private key encryption"<<endl;
+            else cout << "OK" << endl;
+
+            cout << "Single private key decryption"<<endl;
             RSAMessage dec_msg = RSADP_ref(enc_msg, key);
-            if ( dec_msg != msg ) {
+            RSAMessage ref_dec_msg = reference_public(enc_msg, key, false);
+            cout << "Verification of decrypted data: ";
+            if ( dec_msg != msg || dec_msg != ref_dec_msg) {
+                cout << "decryption mismatch:" << endl;
                 cout << " Source msg: "<<msg.to_hex_string()<<endl;
                 cout << "Encoded msg: "<<enc_msg.to_hex_string()<<endl;
                 cout << "Decoded msg: "<<dec_msg.to_hex_string()<<endl;
+                cout << "Ref Dec msg: "<<ref_dec_msg.to_hex_string()<<endl;
                 return 1;
             }
-            else {
-                cout << "Results are correct" << endl;
-            }
+            else cout << "OK" << endl;
         }
 
         if ( exp_ones ) {
@@ -1203,11 +1411,15 @@ int main(int argc, char *argv[])
             benchmarking = true;
             const int COUNT = bench_count;
             vector<RSAMessage> output(COUNT);
+            int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_PADDING;
             cout << "Running sequential private encryption benchmark " << COUNT << endl;
             double t0 = get_time();
-            for ( int i = 0; i < COUNT; ++i ) {
+            if (!pkcs_mode)
+              for ( int i = 0; i < COUNT; ++i )
                 output[i] = RSADP_ref(msg, key);
-            }
+            else
+              for ( int i = 0; i < COUNT; ++i )
+                rsa_pkcs_private_encrypt(msg, output[i], key, padding, blindOff);
             double t1 = get_time();
             cout << "Private fast time: "<<(t1-t0)/COUNT*1e6<<" uS"<<endl;
             benchmarking = false;
@@ -1218,13 +1430,32 @@ int main(int argc, char *argv[])
                 cout << "Verification" << endl;
                 size_t error_count = 0;
                 for ( int i = 0; i < COUNT; ++i ) {
-                    RSAMessage dec = reference_public(output[i], key);
-                    if ( dec != msg ) {
-                        cerr << "Failed decoding "<<i<<":\n";
-                        cerr << "inp: "<<msg<<'\n';
-                        cerr << "enc: "<<output[i]<<'\n';
-                        cerr << "dec: "<<dec<<endl;
-                        ++error_count;
+                    if (!pkcs_mode) {
+                      RSAMessage dec = reference_public(output[i], key);
+                      if ( dec != msg ) {
+                          cerr << "Failed decoding "<<i<<":\n";
+                          cerr << "inp: "<<msg<<'\n';
+                          cerr << "enc: "<<output[i]<<'\n';
+                          cerr << "dec: "<<dec<<endl;
+                          ++error_count;
+                      }
+                    }
+                    else {
+                      int msgSize = pkcs_nopadd ? RSA_size(sslKey) : (msg.get_actual_bit_size()+7)/8;
+                      uint8_t* msgBigEnd = new uint8_t[msgSize];
+                      msg.get_bigend_to_bytes(msgBigEnd, msgSize);
+                      uint8_t* msgBigEndEncRef = new uint8_t[RSA_size(sslKey)];
+                      int refSize = RSA_private_encrypt(msgSize, msgBigEnd, msgBigEndEncRef, sslKey, padding);
+                      RSAMessage ref_enc_msg(msgBigEndEncRef, refSize, true);
+                      delete[] msgBigEnd;
+                      delete[] msgBigEndEncRef;
+                      if ( ref_enc_msg != output[i] ) {
+                          cerr << "Failed encoding "<<i<<":\n";
+                          cerr << "inp: "<<msg<<'\n';
+                          cerr << "enc: "<<output[i]<<'\n';
+                          cerr << "ref_enc: "<<ref_enc_msg<<endl;
+                          ++error_count;
+                      }
                     }
                 }
                 if ( error_count ) {
@@ -1430,6 +1661,8 @@ int main(int argc, char *argv[])
             benchmarking = false;
             skip_opencl_call = false;
         }
+
+        RSA_free(sslKey);
     }
     catch (exception& exc) {
         cerr << "Exception: "<<exc.what()<<endl;

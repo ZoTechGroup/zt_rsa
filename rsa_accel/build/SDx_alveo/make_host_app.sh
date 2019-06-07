@@ -12,6 +12,7 @@ g++ ../../src/rsa_test.cpp\
     ../../src/rsa_seq.cpp\
     ../../src/rsa_int.cpp\
     ../../src/rsa.cpp\
+    ../../src/rsa_pkcs.cpp\
     -I$XILINX_VIVADO/include\
     -I$OPENSSL_DIR/include\
     -DMAX_RSA_BITS=2048 -DUSE_OPENCL\
