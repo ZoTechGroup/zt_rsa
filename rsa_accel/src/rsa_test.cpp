@@ -1412,7 +1412,9 @@ int main(int argc, char *argv[])
             const int COUNT = bench_count;
             vector<RSAMessage> output(COUNT);
             int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_PADDING;
-            cout << "Running sequential private encryption benchmark " << COUNT << endl;
+            cout << "Running sequential private encryption benchmark (" << COUNT << " runs) in " ;
+            if (!pkcs_mode) cout << "modular exponentiation mode." << endl;
+            else            cout << "PKCS-compliant sign mode." << endl;
             double t0 = get_time();
             if (!pkcs_mode)
               for ( int i = 0; i < COUNT; ++i )
