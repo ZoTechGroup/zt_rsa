@@ -272,7 +272,7 @@ int ref_powmod_complex_sec_queue_after(const RSAMessage& msg, const RSAPrivateKe
 }
 */
 
-void ref_powmod_complex_sec_packet(vector<const RSAPrivateKey*>& keys, vector<RSAMessage>& inp_msgs, vector<RSAMessage>& enc_msgs)
+void ref_powmod_complex_sec_packet(const vector<const RSAPrivateKey*>& keys, const vector<RSAMessage>& inp_msgs, vector<RSAMessage>& enc_msgs)
 {
   size_t COUNT = keys.size();
   vector<MontgPowParams*> params(COUNT*2);
@@ -1596,16 +1596,16 @@ int main(int argc, char *argv[])
             double t0 = get_time();
             {
                 TIMER_N("bench_private", COUNT);
-                if ( low_level ) {
+                if (pkcs_mode) {
+                  if (rsa_pkcs_private_encrypt_packet(keys, inp_msgs, enc_msgs, padding, blindOff, low_level, low_level2) < 0) return 1;
+                }
+                else if ( low_level ) {
                     if ( low_level2 )
                         LowLevel::encrypt2(keys, inp_msgs, enc_msgs);
                     else
                         LowLevel::encrypt(keys, inp_msgs, enc_msgs);
                 }
-                else if (!pkcs_mode)
-                  ref_powmod_complex_sec_packet(keys, inp_msgs, enc_msgs);
-                else
-                  if (rsa_pkcs_private_encrypt_packet(keys, inp_msgs, enc_msgs, padding, blindOff) < 0) return 1;
+                else ref_powmod_complex_sec_packet(keys, inp_msgs, enc_msgs);
             }
             double t1 = get_time();
             cout << "Private parallel time: "<<(t1-t0)/COUNT*1e6<<" uS"<<endl;

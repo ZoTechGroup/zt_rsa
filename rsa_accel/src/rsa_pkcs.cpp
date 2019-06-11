@@ -29,8 +29,12 @@
 
 RSAMessage ref_powmod_simple     (RSAMessage const&, RSAFullInt    const&, RSAModulus const&);
 RSAMessage ref_powmod_complex_sec(RSAMessage const&, RSAPrivateKey const&, bool = false);
-void ref_powmod_complex_sec_packet(std::vector<const RSAPrivateKey*>&, std::vector<RSAMessage>&, std::vector<RSAMessage>&);
 
+void ref_powmod_complex_sec_packet(const std::vector<const RSAPrivateKey*>&, const std::vector<RSAMessage>&, std::vector<RSAMessage>&);
+namespace LowLevel {
+    void encrypt                  (const std::vector<const RSAPrivateKey*>&, const std::vector<RSAMessage>&, std::vector<RSAMessage>&);
+    void encrypt2                 (const std::vector<const RSAPrivateKey*>&, const std::vector<RSAMessage>&, std::vector<RSAMessage>&);
+}
 
 inline unsigned int constant_time_msb(unsigned int a)
 {
@@ -597,8 +601,8 @@ int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey&
     return r;
 }
 
-int rsa_pkcs_private_encrypt_packet(std::vector<const RSAPrivateKey*>& keys, std::vector<RSAMessage>& inp_msgs, std::vector<RSAMessage>& enc_msgs,
-                                    int padding, bool const blindOff)
+int rsa_pkcs_private_encrypt_packet(const std::vector<const RSAPrivateKey*>& keys, const std::vector<RSAMessage>& inp_msgs, std::vector<RSAMessage>& enc_msgs,
+                                    int padding, bool const blindOff, bool const low_level, bool const low_level2)
 {
     size_t COUNT = keys.size();
     std::vector<RSAMessage> inp_msgs_copy(inp_msgs);
@@ -607,7 +611,11 @@ int rsa_pkcs_private_encrypt_packet(std::vector<const RSAPrivateKey*>& keys, std
     for ( int i = 0; i < COUNT; ++i )
       if (rsa_pkcs_private_encrypt_preexp(inp_msgs_copy[i], *keys[i], padding, blindOff, blindings[i]) < 0) return -1;
 
-    ref_powmod_complex_sec_packet(keys, inp_msgs_copy, enc_msgs); // using CRT reduction
+    if ( low_level ) {
+         if ( low_level2 ) LowLevel::encrypt2(keys, inp_msgs_copy, enc_msgs);
+         else              LowLevel::encrypt (keys, inp_msgs_copy, enc_msgs);
+    }
+    else ref_powmod_complex_sec_packet(keys, inp_msgs_copy, enc_msgs);
 
     for ( int i = 0; i < COUNT; ++i )
       if (rsa_pkcs_private_encrypt_postexp(enc_msgs[i], blindings[i]) < 0) return -1;

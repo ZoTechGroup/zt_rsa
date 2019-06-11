@@ -17,6 +17,7 @@ int rsa_pkcs_private_encrypt(      RSAMessage,  RSAMessage&, const RSAPrivateKey
 int rsa_pkcs_public_decrypt (const RSAMessage&, RSAMessage&, const RSAPrivateKey&, int);
 int rsa_pkcs_private_decrypt(      RSAMessage,  RSAMessage&, const RSAPrivateKey&, int, bool const);
 
-int rsa_pkcs_private_encrypt_packet(std::vector<const RSAPrivateKey*>&, std::vector<RSAMessage>&, std::vector<RSAMessage>&, int, bool const);
+int rsa_pkcs_private_encrypt_packet(const std::vector<const RSAPrivateKey*>&, const std::vector<RSAMessage>&, std::vector<RSAMessage>&, 
+                                    int, bool const, bool const, bool const);
 
 #endif // RSA_PKCS_DEF_H
