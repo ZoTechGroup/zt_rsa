@@ -10,6 +10,8 @@
 //This OpenSSL header is needed in case native cryptographically strong pseudo-random RAND_bytes() function is used.
 //#include <openssl/rand.h>
 
+#include <vector>
+
 #include "rsa.h"
 #include "rsa_gmp.h"
 #include "rsa_pkcs.h"
@@ -27,6 +29,7 @@
 
 RSAMessage ref_powmod_simple     (RSAMessage const&, RSAFullInt    const&, RSAModulus const&);
 RSAMessage ref_powmod_complex_sec(RSAMessage const&, RSAPrivateKey const&, bool = false);
+void ref_powmod_complex_sec_packet(std::vector<RSAMessage>&, std::vector<RSAMessage>&, std::vector<const RSAPrivateKey*>&, size_t);
 
 
 inline unsigned int constant_time_msb(unsigned int a)
@@ -491,8 +494,7 @@ BN_BLINDING* RSA_setup_blinding(const RSAPrivateKey& key, BN_CTX *in_ctx)
 }
 
 
-// signing
-int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey& key, int padding, bool const blindOff)
+int rsa_pkcs_private_encrypt_preexp(RSAMessage& f, const RSAPrivateKey& key, int padding, bool const blindOff, BN_BLINDING*& blinding)
 {
     if (padding == RSA_PKCS1_PADDING) {
       int const num = (key.modulus.get_actual_bit_size()+7)/8;
@@ -532,20 +534,52 @@ int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey&
     // ---------- Blinding -----------
     // A non-NULL unblind instructs BN_BLINDING_convert_ex() and BN_BLINDING_invert_ex()
     // to store the unblinding factor outside the blinding structure.
-    BN_BLINDING *blinding = NULL;
-    BIGNUM *unblind = NULL;
-    BN_CTX *ctx = NULL;
     if (!blindOff) {
-      if ((ctx = BN_CTX_new()) == NULL) return -1;
+      BN_CTX* ctx = BN_CTX_new();
+      if (ctx == NULL) return -1;
       BN_CTX_start(ctx);
+
       blinding = RSA_setup_blinding(key, ctx);
       if (blinding) {
         BIGNUM* bn_f(f);
-        if (!BN_BLINDING_convert_ex(bn_f, unblind, blinding, ctx)) return -1;
+        if (!BN_BLINDING_convert_ex(bn_f, NULL, blinding, ctx)) return -1;
         f = bn_f;
         BN_clear_free(bn_f);
       }
+
+      BN_CTX_end(ctx);
+      BN_CTX_free(ctx);
     }
+
+    return 1;
+}
+
+int rsa_pkcs_private_encrypt_postexp(RSAMessage& ret, BN_BLINDING*& blinding)
+{
+    // ---------- Unblinding -----------
+    if (blinding) {
+      BN_CTX* ctx = BN_CTX_new();
+      if (ctx == NULL) return -1;
+      BN_CTX_start(ctx);
+
+      BIGNUM* bn_ret(ret);
+      if (!BN_BLINDING_invert_ex(bn_ret, NULL, blinding, ctx)) return -1;
+      ret = bn_ret;
+      BN_clear_free(bn_ret);
+
+      BN_CTX_end(ctx);
+      BN_CTX_free(ctx);
+    }
+
+    return 1;
+}
+
+// signing
+int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey& key, int padding, bool const blindOff)
+{
+    BN_BLINDING* blinding = NULL;
+
+    if (rsa_pkcs_private_encrypt_preexp(f, key, padding, blindOff, blinding) < 0) return -1;
 
     RSAPrimeInt const ZeroRSAInt; // constant initialized to zero
     if ( true || (
@@ -557,21 +591,31 @@ int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey&
          ret = ref_powmod_complex_sec(f, key); // using CRT reduction
     else ret = ref_powmod_simple     (f, key.privateExponent, key.modulus);
 
-    // ---------- Unblinding -----------
-    if (!blindOff) {
-      if (blinding) {
-        BIGNUM* bn_ret(ret);
-        if (!BN_BLINDING_invert_ex(bn_ret, unblind, blinding, ctx)) return -1;
-        ret = bn_ret;
-        BN_clear_free(bn_ret);
-      }
-      BN_CTX_end(ctx);
-      BN_CTX_free(ctx);
-    }
+    if (rsa_pkcs_private_encrypt_postexp(ret, blinding) < 0) return -1;
 
     size_t const r = (ret.get_actual_bit_size()+7)/8;
     return r;
 }
+
+int rsa_pkcs_private_encrypt_packet(std::vector<RSAMessage>& inp_msgs, std::vector<RSAMessage>& enc_msgs, std::vector<const RSAPrivateKey*>& keys, size_t COUNT,
+                                    int padding, bool const blindOff)
+{
+    std::vector<RSAMessage> inp_msgs_copy(inp_msgs);
+    BN_BLINDING** blindings = new BN_BLINDING*[COUNT]{};
+
+    for ( int i = 0; i < COUNT; ++i )
+      if (rsa_pkcs_private_encrypt_preexp(inp_msgs_copy[i], *keys[i], padding, blindOff, blindings[i]) < 0) return -1;
+
+    ref_powmod_complex_sec_packet(inp_msgs_copy, enc_msgs, keys, COUNT); // using CRT reduction
+
+    for ( int i = 0; i < COUNT; ++i )
+      if (rsa_pkcs_private_encrypt_postexp(enc_msgs[i], blindings[i]) < 0) return -1;
+
+    delete[] blindings;
+
+    return 1;
+}
+
 
 int rsa_pkcs_private_decrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey& key, int padding, bool const blindOff)
 {

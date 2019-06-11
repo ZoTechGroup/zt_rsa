@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <vector>
 #include "rsa_seq.h"
 #include "rsa.h"
 #include "rsa_gmp.h"
@@ -6,7 +7,6 @@
 #include <openssl/pem.h>
 #include <iostream>
 #include <cassert>
-#include <vector>
 #include "timer.h"
 using namespace std;
 
@@ -271,6 +271,51 @@ int ref_powmod_complex_sec_queue_after(const RSAMessage& msg, const RSAPrivateKe
     return ret;
 }
 */
+
+void ref_powmod_complex_sec_packet(vector<RSAMessage>& inp_msgs, vector<RSAMessage>& enc_msgs, vector<const RSAPrivateKey*>& keys, size_t COUNT)
+{
+  vector<MontgPowParams*> params(COUNT*2);
+  vector<rsa_word_t*> input(COUNT*2);
+  vector<rsa_word_t*> output(COUNT*2);
+  for ( int i = 0; i < COUNT; ++i ) {
+      const RSAPrivateKey& key = *keys[i];
+      const RSAMessage& data = inp_msgs[i];
+      params[i*2+0] =
+          rsa_montg_alloc_init_params(num(key.prime1), num(key.exponent1), fast_power);
+      assert(params[i*2+0]);
+      params[i*2+1] =
+          rsa_montg_alloc_init_params(num(key.prime2), num(key.exponent2), fast_power);
+      assert(params[i*2+1]);
+      input[i*2+0] =
+          rsa_montg_alloc_init_private_input(num(data), num(key.prime1));
+      assert(input[i*2+0]);
+      input[i*2+1] =
+          rsa_montg_alloc_init_private_input(num(data), num(key.prime2));
+      assert(input[i*2+1]);
+      output[i*2+0] = rsa_montg_alloc_output();
+      output[i*2+1] = rsa_montg_alloc_output();
+  }
+  rsa_montg_pow_N(COUNT*2, params.data(), input.data(), output.data());
+  for ( int i = 0; i < COUNT*2; ++i ) {
+      rsa_montg_free_params(params[i]);
+      rsa_montg_free_input(input[i]);
+  }
+  params.clear();
+  input.clear();
+  // post-processing
+  for ( int i = 0; i < COUNT; ++i ) {
+      const RSAPrivateKey& key = *keys[i];
+      rsa_montg_combine_private_outputs(enc_msgs[i].words,
+                                        output[i*2+0], output[i*2+1],
+                                        num(key.prime1),
+                                        num(key.prime2),
+                                        num(key.coefficient));
+  }
+  for ( int i = 0; i < 2*COUNT; ++i ) {
+      rsa_montg_free_output(output[i]);
+  }
+  output.clear();
+}
 
 RSAMessage reference_public(const RSAMessage& msg, const RSAPrivateKey& key, bool as_public = true, bool GMPuse = false)
 {
@@ -1536,7 +1581,10 @@ int main(int argc, char *argv[])
             benchmarking = true;
             skip_opencl_call = bench_CPU;
             int COUNT = bench_count;
-            cout << "Running parallel private encryption benchmark " << COUNT << endl;
+            int padding = pkcs_nopadd ? RSA_NO_PADDING : RSA_PKCS1_PADDING;
+            cout << "Running parallel private encryption benchmark (" << COUNT << " runs) in " ;
+            if (!pkcs_mode) cout << "modular exponentiation mode." << endl;
+            else            cout << "PKCS-compliant sign mode."    << endl;
             vector<const RSAPrivateKey*> keys(COUNT);
             vector<RSAMessage> inp_msgs(COUNT);
             vector<RSAMessage> enc_msgs(COUNT);
@@ -1553,49 +1601,10 @@ int main(int argc, char *argv[])
                     else
                         LowLevel::encrypt(keys, inp_msgs, enc_msgs);
                 }
-                else {
-                    vector<MontgPowParams*> params(COUNT*2);
-                    vector<rsa_word_t*> input(COUNT*2);
-                    vector<rsa_word_t*> output(COUNT*2);
-                    for ( int i = 0; i < COUNT; ++i ) {
-                        const RSAPrivateKey& key = *keys[i];
-                        const RSAMessage& data = inp_msgs[i];
-                        params[i*2+0] =
-                            rsa_montg_alloc_init_params(num(key.prime1), num(key.exponent1), fast_power);
-                        assert(params[i*2+0]);
-                        params[i*2+1] =
-                            rsa_montg_alloc_init_params(num(key.prime2), num(key.exponent2), fast_power);
-                        assert(params[i*2+1]);
-                        input[i*2+0] =
-                            rsa_montg_alloc_init_private_input(num(data), num(key.prime1));
-                        assert(input[i*2+0]);
-                        input[i*2+1] =
-                            rsa_montg_alloc_init_private_input(num(data), num(key.prime2));
-                        assert(input[i*2+1]);
-                        output[i*2+0] = rsa_montg_alloc_output();
-                        output[i*2+1] = rsa_montg_alloc_output();
-                    }
-                    rsa_montg_pow_N(COUNT*2, params.data(), input.data(), output.data());
-                    for ( int i = 0; i < COUNT*2; ++i ) {
-                        rsa_montg_free_params(params[i]);
-                        rsa_montg_free_input(input[i]);
-                    }
-                    params.clear();
-                    input.clear();
-                
-                    // post-processing
-                    for ( int i = 0; i < COUNT; ++i ) {
-                        rsa_montg_combine_private_outputs(enc_msgs[i].words,
-                                                          output[i*2+0], output[i*2+1],
-                                                          num(key.prime1),
-                                                          num(key.prime2),
-                                                          num(key.coefficient));
-                    }
-                    for ( int i = 0; i < 2*COUNT; ++i ) {
-                        rsa_montg_free_output(output[i]);
-                    }
-                    output.clear();
-                }
+                else if (!pkcs_mode)
+                  ref_powmod_complex_sec_packet(inp_msgs, enc_msgs, keys, COUNT);
+                else
+                  if (rsa_pkcs_private_encrypt_packet(inp_msgs, enc_msgs, keys, COUNT, padding, blindOff) < 0) return 1;
             }
             double t1 = get_time();
             cout << "Private parallel time: "<<(t1-t0)/COUNT*1e6<<" uS"<<endl;
@@ -1612,13 +1621,32 @@ int main(int argc, char *argv[])
                 size_t error_count = 0;
 #if 1
                 for ( int i = 0; i < COUNT; ++i ) {
-                    RSAMessage dec = reference_public(enc_msgs[i], *keys[i]);
-                    if ( dec != inp_msgs[i] ) {
-                        cerr << "Failed encoding "<<i<<":\n";
-                        cerr << "inp: "<<inp_msgs[i]<<'\n';
-                        cerr << "enc: "<<enc_msgs[i]<<'\n';
-                        cerr << "dec: "<<dec<<endl;
-                        ++error_count;
+                    if (!pkcs_mode) {
+                      RSAMessage dec = reference_public(enc_msgs[i], *keys[i]);
+                      if ( dec != inp_msgs[i] ) {
+                          cerr << "Failed encoding "<<i<<":\n";
+                          cerr << "inp: "<<inp_msgs[i]<<'\n';
+                          cerr << "enc: "<<enc_msgs[i]<<'\n';
+                          cerr << "dec: "<<dec<<endl;
+                          ++error_count;
+                      }
+                    }
+                    else {
+                      int msgSize = pkcs_nopadd ? RSA_size(sslKey) : (msg.get_actual_bit_size()+7)/8;
+                      uint8_t* msgBigEnd = new uint8_t[msgSize];
+                      inp_msgs[i].get_bigend_to_bytes(msgBigEnd, msgSize);
+                      uint8_t* msgBigEndEncRef = new uint8_t[RSA_size(sslKey)];
+                      int refSize = RSA_private_encrypt(msgSize, msgBigEnd, msgBigEndEncRef, sslKey, padding);
+                      RSAMessage ref_enc_msg(msgBigEndEncRef, refSize, true);
+                      delete[] msgBigEnd;
+                      delete[] msgBigEndEncRef;
+                      if ( ref_enc_msg != enc_msgs[i] ) {
+                          cerr << "Failed encoding "<<i<<":\n";
+                          cerr << "inp: "<<inp_msgs[i]<<'\n';
+                          cerr << "enc: "<<enc_msgs[i]<<'\n';
+                          cerr << "ref_enc: "<<ref_enc_msg<<endl;
+                          ++error_count;
+                      }
                     }
                 }
 #else
