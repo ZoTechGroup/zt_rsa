@@ -29,7 +29,7 @@
 
 RSAMessage ref_powmod_simple     (RSAMessage const&, RSAFullInt    const&, RSAModulus const&);
 RSAMessage ref_powmod_complex_sec(RSAMessage const&, RSAPrivateKey const&, bool = false);
-void ref_powmod_complex_sec_packet(std::vector<RSAMessage>&, std::vector<RSAMessage>&, std::vector<const RSAPrivateKey*>&, size_t);
+void ref_powmod_complex_sec_packet(std::vector<const RSAPrivateKey*>&, std::vector<RSAMessage>&, std::vector<RSAMessage>&);
 
 
 inline unsigned int constant_time_msb(unsigned int a)
@@ -597,16 +597,17 @@ int rsa_pkcs_private_encrypt(RSAMessage f, RSAMessage& ret, const RSAPrivateKey&
     return r;
 }
 
-int rsa_pkcs_private_encrypt_packet(std::vector<RSAMessage>& inp_msgs, std::vector<RSAMessage>& enc_msgs, std::vector<const RSAPrivateKey*>& keys, size_t COUNT,
+int rsa_pkcs_private_encrypt_packet(std::vector<const RSAPrivateKey*>& keys, std::vector<RSAMessage>& inp_msgs, std::vector<RSAMessage>& enc_msgs,
                                     int padding, bool const blindOff)
 {
+    size_t COUNT = keys.size();
     std::vector<RSAMessage> inp_msgs_copy(inp_msgs);
     BN_BLINDING** blindings = new BN_BLINDING*[COUNT]{};
 
     for ( int i = 0; i < COUNT; ++i )
       if (rsa_pkcs_private_encrypt_preexp(inp_msgs_copy[i], *keys[i], padding, blindOff, blindings[i]) < 0) return -1;
 
-    ref_powmod_complex_sec_packet(inp_msgs_copy, enc_msgs, keys, COUNT); // using CRT reduction
+    ref_powmod_complex_sec_packet(keys, inp_msgs_copy, enc_msgs); // using CRT reduction
 
     for ( int i = 0; i < COUNT; ++i )
       if (rsa_pkcs_private_encrypt_postexp(enc_msgs[i], blindings[i]) < 0) return -1;

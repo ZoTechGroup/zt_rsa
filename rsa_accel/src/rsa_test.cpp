@@ -272,8 +272,9 @@ int ref_powmod_complex_sec_queue_after(const RSAMessage& msg, const RSAPrivateKe
 }
 */
 
-void ref_powmod_complex_sec_packet(vector<RSAMessage>& inp_msgs, vector<RSAMessage>& enc_msgs, vector<const RSAPrivateKey*>& keys, size_t COUNT)
+void ref_powmod_complex_sec_packet(vector<const RSAPrivateKey*>& keys, vector<RSAMessage>& inp_msgs, vector<RSAMessage>& enc_msgs)
 {
+  size_t COUNT = keys.size();
   vector<MontgPowParams*> params(COUNT*2);
   vector<rsa_word_t*> input(COUNT*2);
   vector<rsa_word_t*> output(COUNT*2);
@@ -1602,9 +1603,9 @@ int main(int argc, char *argv[])
                         LowLevel::encrypt(keys, inp_msgs, enc_msgs);
                 }
                 else if (!pkcs_mode)
-                  ref_powmod_complex_sec_packet(inp_msgs, enc_msgs, keys, COUNT);
+                  ref_powmod_complex_sec_packet(keys, inp_msgs, enc_msgs);
                 else
-                  if (rsa_pkcs_private_encrypt_packet(inp_msgs, enc_msgs, keys, COUNT, padding, blindOff) < 0) return 1;
+                  if (rsa_pkcs_private_encrypt_packet(keys, inp_msgs, enc_msgs, padding, blindOff) < 0) return 1;
             }
             double t1 = get_time();
             cout << "Private parallel time: "<<(t1-t0)/COUNT*1e6<<" uS"<<endl;
