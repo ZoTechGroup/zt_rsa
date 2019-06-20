@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if [ -z "$XILINX_VIVADO" ]; then
-    echo "XILINX_VIVADO is not set, please source ../xilinx_xxx_setup.sh script."
+if [ -z "$OPENSSL_DIR" ]; then
+    echo "OPENSSL_DIR is not set, please source ../xilinx_xxx_setup.sh script."
     exit 2
 fi
 
