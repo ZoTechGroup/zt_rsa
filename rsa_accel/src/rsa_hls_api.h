@@ -3,10 +3,14 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include "ap_axi_sdata.h"
+#include "hls_stream.h"
 
 // input/output word type and its size in bits
 typedef uint64_t rsa_word_t;
 const size_t RSA_WORD_BITS = 64;
+typedef ap_axiu<RSA_WORD_BITS, 0, 0, 0> rsa_stword_t;
+typedef ap_axiu<8*sizeof(uint16_t), 0, 0, 0> reqcnt_stword_t;
 
 inline
 size_t rsa_bits_to_words(size_t bits)
@@ -20,11 +24,23 @@ enum PowerMode {
     secure_power
 };
 
+// Definition if the RSA kernel is implemented as whole one or is separated to interface and core parts
+#ifndef ONLY_KERNEL_IF
+#define ONLY_KERNEL_IF false
+#endif
+
 // Montgomery exponentiation kernel entry function
 extern "C"
-void rsaMontgPowNKernelEntry64(uint16_t req_count,
-                               const rsa_word_t* args, // ARG64_WORDS
-                               rsa_word_t* results); // RESULT64_WORDS
+void rsaMontgPowNKernelEntry64(uint16_t,
+                               const rsa_word_t*, // ARG64_WORDS
+                               rsa_word_t* // RESULT64_WORDS
+#if (ONLY_KERNEL_IF)
+                               ,
+                               hls::stream<reqcnt_stword_t>&,
+                               hls::stream<rsa_stword_t>&,
+                               hls::stream<rsa_stword_t>&
+#endif
+                              );
 
 // Montgomery exponentiation kernel parameters
 // it can be obtained by calling kernel entry function with req_count==0
