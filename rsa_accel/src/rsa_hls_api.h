@@ -8,7 +8,7 @@
 
 // input/output word type and its size in bits
 typedef uint64_t rsa_word_t;
-const size_t RSA_WORD_BITS = 64;
+const size_t RSA_WORD_BITS = 8*sizeof(rsa_word_t);
 typedef ap_axiu<RSA_WORD_BITS, 0, 0, 0> rsa_stword_t;
 typedef ap_axiu<8*sizeof(uint16_t), 0, 0, 0> reqcnt_stword_t;
 
